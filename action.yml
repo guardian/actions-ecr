@@ -21,19 +21,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v6.2.3
-      with:
-        role-to-assume: ${{ inputs.roleArn }}
-        aws-region: eu-west-1
-        mask-aws-account-id: 'true'
-
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2.1.6
-      with:
-        mask-password: 'true'
-
     - name: Determine ECR repository and branch name
       id: determine-repository
       shell: bash
@@ -93,6 +80,32 @@ runs:
 
         echo "sourceImage=${SOURCE_IMAGE}" >> $GITHUB_OUTPUT
 
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v6.2.3
+      with:
+        role-to-assume: ${{ inputs.roleArn }}
+        aws-region: eu-west-1
+        mask-aws-account-id: 'true'
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2.1.6
+      with:
+        mask-password: 'true'
+
+    # Ideally, this Action is used in an isolated job, so that the AWS credentials (stored in environment variables) are not available to any other jobs.
+    # However, if this Action is used in a job that has other steps, clear the AWS credentials from the environment at the end of the job to avoid leaking them to any subsequent steps.
+    # See https://github.com/aws-actions/configure-aws-credentials/issues/1308.
+    - name: Clear AWS credentials
+      if: always()
+      shell: bash
+      run: |
+        echo "AWS_ACCESS_KEY_ID=''" >>"$GITHUB_ENV"
+        echo "AWS_SECRET_ACCESS_KEY=''" >>"$GITHUB_ENV"
+        echo "AWS_SESSION_TOKEN=''" >>"$GITHUB_ENV"
+        echo "AWS_DEFAULT_REGION=''" >>"$GITHUB_ENV"
+        echo "AWS_REGION=''" >>"$GITHUB_ENV"
+
     - name: Tag image
       id: tag-image
       shell: bash
@@ -127,19 +140,6 @@ runs:
         
         IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY@$IMAGE_DIGEST"
         echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT
-
-    # Ideally, this Action is used in an isolated job, so that the AWS credentials (stored in environment variables) are not available to any other jobs.
-    # However, if this Action is used in a job that has other steps, clear the AWS credentials from the environment at the end of the job to avoid leaking them to any subsequent steps.
-    # See https://github.com/aws-actions/configure-aws-credentials/issues/1308.
-    - name: Clear AWS credentials
-      if: always()
-      shell: bash
-      run: |
-        echo "AWS_ACCESS_KEY_ID=''" >>"$GITHUB_ENV"
-        echo "AWS_SECRET_ACCESS_KEY=''" >>"$GITHUB_ENV"
-        echo "AWS_SESSION_TOKEN=''" >>"$GITHUB_ENV"
-        echo "AWS_DEFAULT_REGION=''" >>"$GITHUB_ENV"
-        echo "AWS_REGION=''" >>"$GITHUB_ENV"
 
     - uses: actions/github-script@v9
       env:
