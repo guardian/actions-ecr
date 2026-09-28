@@ -16,7 +16,9 @@ The IAM Role passed to `roleArn` must also have permissions to push to ECR.
 This can be obtained by raising a PR to https://github.com/guardian/riffraff-platform.
 
 ## Example usage
-It is recommended to use this Action in conjunction with [`guardian/actions-build-facts`](https://github.com/guardian/actions-build-facts) and to run in isolated jobs.
+
+> [!NOTE]  
+> To prevent leakage of AWS Credentials it is recommended to run this action in an isolated job.
 
 ```yaml
 name: CI
@@ -27,20 +29,6 @@ on:
     branches:
       - main
 jobs:
-  # Obtain build facts
-  facts:
-    runs-on: ubuntu-slim
-    permissions: {} # This job doesn't need any permissions.
-    outputs:
-      branchName: ${{ steps.get-build-facts.outputs.branchName }}
-      buildNumber: ${{ steps.get-build-facts.outputs.buildNumber }}
-      commitSha: ${{ steps.get-build-facts.outputs.commitSha }}
-    steps:
-      # Find the latest version here - https://github.com/guardian/actions-build-facts/releases.
-      - uses: guardian/actions-build-facts@v0.0.1
-        id: get-build-facts
-
-  # Now use the facts in your build steps
   push-image:
     runs-on: ubuntu-latest
     needs:
@@ -60,9 +48,6 @@ jobs:
         uses: guardian/actions-publish-image@v0.0.1
         with:
           roleArn: ${{ secrets.GU_ARTIFACTS_ROLE_ARN }}
-          branchName: ${{ needs.facts.outputs.branchName }}
-          buildNumber: ${{ needs.facts.outputs.buildNumber }}
-          commitSha: ${{ needs.facts.outputs.commitSha }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
 ```
 
