@@ -1,5 +1,5 @@
 name: "Guardian Publish Image"
-description: "Tag and push a Docker image to Amazon ECR and return its image digest."
+description: "Tag and push a Docker image to AWS ECR and return its image digest."
 inputs:
   roleArn:
     description: "The ARN of the role to assume to push the image."
@@ -21,45 +21,41 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v6.2.3
-      with:
-        role-to-assume: ${{ inputs.roleArn }}
-        aws-region: eu-west-1
-        mask-aws-account-id: 'true'
-
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2.1.6
-      with:
-        mask-password: 'true'
-
-    - name: Tag image
-      id: tag-image
+    - name: Determine ECR repository and branch name
+      id: determine-repository
       shell: bash
       env:
         GITHUB_REPOSITORY: ${{ github.repository }}
-        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         RAW_BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref || 'unknown' }}
-        BUILD_NUMBER: ${{ github.run_number }}
         APP_NAME: ${{ inputs.appName }}
       run: |
         # Remove "refs/heads/" prefix
         TRIMMED_BRANCH_NAME="${RAW_BRANCH_NAME#refs/heads/}"
-        
+
         # Replace '/' with '-' for ECR compatibility
-        BRANCH_NAME=${TRIMMED_BRANCH_NAME//\//-}
+        SAFE_BRANCH_NAME=${TRIMMED_BRANCH_NAME//\//-}
 
         # Default appName to the github repository name (without the owner) if not provided
         if [[ -z $APP_NAME ]]; then
           APP_NAME="${GITHUB_REPOSITORY#*/}"
-        fi  
-
-        ECR_REPOSITORY=$GITHUB_REPOSITORY
-        if [[ -n $APP_NAME ]]; then
-          ECR_REPOSITORY=$ECR_REPOSITORY/$APP_NAME
         fi
 
+        IMAGE_REPOSITORY=$GITHUB_REPOSITORY
+        if [[ -n $APP_NAME ]]; then
+          IMAGE_REPOSITORY=$IMAGE_REPOSITORY/$APP_NAME
+        fi
+
+        echo "appName=${APP_NAME}" >> $GITHUB_OUTPUT
+        echo "safeBranchName=${SAFE_BRANCH_NAME}" >> $GITHUB_OUTPUT
+        echo "imageRepository=${IMAGE_REPOSITORY}" >> $GITHUB_OUTPUT
+
+    - name: Find local source image
+      id: find-source-image
+      shell: bash
+      env:
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        APP_NAME: ${{ steps.determine-repository.outputs.appName }}
+      run: |
         # Look for a local image under the app name repository (e.g. built with `docker build -t <app name> .`)
         # or the `guardian/<app name>` repository (e.g. built with `docker build -t ${{ github.repository }} .`),
         # regardless of tag. Fail if more than one image is found across both repositories, since it's then
@@ -82,33 +78,20 @@ runs:
           exit 1
         fi
 
-        docker image tag $SOURCE_IMAGE $REGISTRY/$ECR_REPOSITORY:branch-$BRANCH_NAME
-        docker image tag $SOURCE_IMAGE $REGISTRY/$ECR_REPOSITORY:build-$BUILD_NUMBER
-        docker image tag $SOURCE_IMAGE $REGISTRY/$ECR_REPOSITORY:lifecycle-$BRANCH_NAME-$BUILD_NUMBER
-        
-        echo "safeBranchName=${BRANCH_NAME}" >> $GITHUB_OUTPUT
-        echo "imageRepository=${ECR_REPOSITORY}" >> $GITHUB_OUTPUT
+        echo "sourceImage=${SOURCE_IMAGE}" >> $GITHUB_OUTPUT
 
-    - name: Push image to Amazon ECR
-      shell: bash
-      env:
-        ECR_REPOSITORY: ${{ steps.tag-image.outputs.imageRepository }}
-        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      run: docker push $REGISTRY/$ECR_REPOSITORY --all-tags
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v6.2.3
+      with:
+        role-to-assume: ${{ inputs.roleArn }}
+        aws-region: eu-west-1
+        mask-aws-account-id: 'true'
 
-    - name: Obtain image details
-      id: obtain-image-details
-      shell: bash
-      env:
-        ECR_REPOSITORY: ${{ steps.tag-image.outputs.imageRepository }}
-        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        BUILD_NUMBER: ${{ github.run_number }}
-      run: |
-        IMAGE_DIGEST=$(docker manifest inspect $REGISTRY/$ECR_REPOSITORY:build-$BUILD_NUMBER --verbose | jq -r '.Descriptor.digest')
-        echo "imageDigest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
-        
-        IMAGE_URI="$REGISTRY/$ECR_REPOSITORY@$IMAGE_DIGEST"
-        echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+    - name: Login to AWS ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2.1.6
+      with:
+        mask-password: 'true'
 
     # Ideally, this Action is used in an isolated job, so that the AWS credentials (stored in environment variables) are not available to any other jobs.
     # However, if this Action is used in a job that has other steps, clear the AWS credentials from the environment at the end of the job to avoid leaking them to any subsequent steps.
@@ -123,11 +106,46 @@ runs:
         echo "AWS_DEFAULT_REGION=''" >>"$GITHUB_ENV"
         echo "AWS_REGION=''" >>"$GITHUB_ENV"
 
+    - name: Tag image
+      id: tag-image
+      shell: bash
+      env:
+        SOURCE_IMAGE: ${{ steps.find-source-image.outputs.sourceImage }}
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
+        BRANCH_NAME: ${{ steps.determine-repository.outputs.safeBranchName }}
+        BUILD_NUMBER: ${{ github.run_number }}
+      run: |
+        docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:branch-$BRANCH_NAME
+        docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER
+        docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:lifecycle-$BRANCH_NAME-$BUILD_NUMBER
+
+    - name: Push image to AWS ECR
+      shell: bash
+      env:
+        IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      run: docker push $REGISTRY/$IMAGE_REPOSITORY --all-tags
+
+    - name: Obtain image details
+      id: obtain-image-details
+      shell: bash
+      env:
+        IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        BUILD_NUMBER: ${{ github.run_number }}
+      run: |
+        IMAGE_DIGEST=$(docker manifest inspect $REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER --verbose | jq -r '.Descriptor.digest')
+        echo "imageDigest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
+        
+        IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY@$IMAGE_DIGEST"
+        echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+
     - uses: actions/github-script@v9
       env:
-        IMAGE_REPOSITORY: ${{ steps.tag-image.outputs.imageRepository }}
+        IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
         IMAGE_DIGEST: ${{ steps.obtain-image-details.outputs.imageDigest }}
-        SAFE_BRANCH_NAME: ${{ steps.tag-image.outputs.safeBranchName }}
+        SAFE_BRANCH_NAME: ${{ steps.determine-repository.outputs.safeBranchName }}
         BUILD_NUMBER: ${{ github.run_number }}
         COMMIT_SHA: ${{ github.sha }}
       with:
