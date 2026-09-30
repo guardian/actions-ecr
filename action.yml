@@ -1,5 +1,5 @@
 name: "Guardian Publish Image"
-description: "Tag and push a Docker image to Amazon ECR and return its image digest."
+description: "Tag and push a Docker image to AWS ECR and return its image digest."
 inputs:
   roleArn:
     description: "The ARN of the role to assume to push the image."
@@ -87,7 +87,7 @@ runs:
         aws-region: eu-west-1
         mask-aws-account-id: 'true'
 
-    - name: Login to Amazon ECR
+    - name: Login to AWS ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2.1.6
       with:
@@ -120,7 +120,7 @@ runs:
         docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER
         docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:lifecycle-$BRANCH_NAME-$BUILD_NUMBER
 
-    - name: Push image to Amazon ECR
+    - name: Push image to AWS ECR
       shell: bash
       env:
         IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
