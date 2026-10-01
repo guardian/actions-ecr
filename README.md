@@ -45,7 +45,7 @@ jobs:
       
       - name: Publish image to ECR
         # Find the latest version here - https://github.com/guardian/actions-publish-image/releases.
-        uses: guardian/actions-publish-image@v0.0.1
+        uses: guardian/actions-publish-image@vX.Y.Z
         with:
           roleArn: ${{ secrets.GU_ARTIFACTS_ROLE_ARN }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
