@@ -1,5 +1,11 @@
 # actions-publish-image
 
+## 0.0.12
+
+### Patch Changes
+
+- 5b1e4fa: Test release following major version bump of changesets dependencies.
+
 ## 0.0.11
 
 ### Patch Changes
