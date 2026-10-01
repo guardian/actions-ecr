@@ -56,3 +56,4 @@ jobs:
           github-token: ${{ steps.app-token.outputs.token }}
           create-github-releases: true
           push-git-tags: true
+          publish-script: npx changeset git-tag
