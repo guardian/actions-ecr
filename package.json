@@ -8,7 +8,7 @@
     "release": "npx changeset"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
+    "@changesets/cli": "^3.0.3",
     "@types/node": "26.6.3",
     "typescript": "7.0.2"
   },
