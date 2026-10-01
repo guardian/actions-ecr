@@ -3,7 +3,7 @@
   "changelog": [
     "@changesets/cli/changelog",
     {
-      "repo": "guardian/actions-publish-image"
+      "repo": "guardian/actions-ecr"
     }
   ],
   "commit": false,

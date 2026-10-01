@@ -1,4 +1,4 @@
-name: "Guardian Publish Image"
+name: "Guardian Container Image: Push"
 description: "Tag and push a Docker image to AWS ECR and return its image digest."
 inputs:
   roleArn:
