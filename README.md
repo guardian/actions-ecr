@@ -3,6 +3,7 @@
 A set of ([composite](https://docs.github.com/en/actions/tutorials/create-actions/create-a-composite-action)) GitHub Actions to interact with AWS ECR. 
 Functionality includes:
 - [Pushing a container image](push/README.md)
+- [Pull a container image](pull/README.md)
 
 ## Releasing
 Automatic releases are handled by Changesets. Please see [here](https://github.com/changesets/changesets) for more information.
