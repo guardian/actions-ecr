@@ -1,5 +1,11 @@
 # actions-publish-image
 
+## 0.0.13
+
+### Patch Changes
+
+- 43eb054: Another test release following major version bump of changesets dependencies.
+
 ## 0.0.12
 
 ### Patch Changes
