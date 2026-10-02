@@ -21,6 +21,28 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        APP_NAME: ${{ inputs.appName }}
+        ROLE_ARN: ${{ inputs.roleArn }}
+        IMAGE_IDENTIFIER: ${{ inputs.imageIdentifier }}
+      run: |
+        if [[ -z "$APP_NAME" ]]; then
+          echo "appName is required and must not be empty."
+          exit 1
+        fi
+        
+        if [[ -z "ROLE_ARN" ]]; then
+          echo "roleArn is required and must not be empty."
+          exit 1
+        fi
+        
+        if [[ -z "IMAGE_IDENTIFIER" ]]; then
+          echo "imageIdentifier is required and must not be empty."
+          exit 1
+        fi
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v6.3.0
       with:

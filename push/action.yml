@@ -20,6 +20,22 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        APP_NAME: ${{ inputs.appName }}
+        ROLE_ARN: ${{ inputs.roleArn }}
+      run: |
+        if [[ -z "$APP_NAME" ]]; then
+          echo "appName is required and must not be empty."
+          exit 1
+        fi
+        
+        if [[ -z "ROLE_ARN" ]]; then
+          echo "roleArn is required and must not be empty."
+          exit 1
+        fi
+
     - name: Determine ECR repository and branch name
       id: determine-repository
       shell: bash
