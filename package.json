@@ -1,5 +1,5 @@
 {
-  "name": "actions-publish-image",
+  "name": "actions-ecr",
   "version": "0.0.13",
   "private": true,
   "type": "module",

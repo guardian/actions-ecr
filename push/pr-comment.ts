@@ -74,7 +74,7 @@ async function commentOnPr(payload: Payload, config: Config, pullRequestNumber: 
   buildNumber,
  } = config;
 
- const marker = `<!-- guardian/actions-publish-image for ${imageRepository} -->`;
+ const marker = `<!-- guardian/actions-ecr for ${imageRepository} -->`;
 
  const commentBody = [
   '### :rocket: Image pushed to AWS ECR',
@@ -116,7 +116,7 @@ async function commentOnPr(payload: Payload, config: Config, pullRequestNumber: 
   '</details>',
   '',
   '---',
-  '_From [guardian/actions-publish-image](https://github.com/guardian/actions-publish-image)._',
+  '_From [guardian/actions-ecr](https://github.com/guardian/actions-ecr)._',
   marker,
  ].join('\n');
 

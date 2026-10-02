@@ -1,7 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "push"
+      - "pull"
     schedule:
       interval: "quarterly"
     commit-message:

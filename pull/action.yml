@@ -1,0 +1,89 @@
+name: "Guardian Container Image: Pull"
+description: "Pull a container image from AWS ECR"
+inputs:
+  roleArn:
+    description: "The ARN of the role to assume to pull the image."
+    required: true
+  githubRepository:
+    description: "The GitHub repository that produced the image to be pulled of format 'owner/name'. Defaults to the current GitHub repository."
+    required: false
+    default: ${{ github.repository }}
+  appName:
+    description: "(optional) The app name, appended to the ECR image repository. Defaults to the `name` portion of the `githubRepository` input."
+    required: false
+  imageIdentifier:
+    description: "An identifier of the image in ECR. Either the image digest of format (e.g. 'sha256:1234') or a tag (e.g. 'branch-main')."
+    required: true
+outputs:
+  imageUri:
+    description: "The URI of the image."
+    value: ${{ steps.determine-image-uri.outputs.imageUri }}
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v6.3.0
+      with:
+        role-to-assume: ${{ inputs.roleArn }}
+        aws-region: eu-west-1
+        mask-aws-account-id: 'true'
+
+    - name: Login to AWS ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2.1.7
+      with:
+        mask-password: 'true'
+
+    # Ideally, this Action is used in an isolated job, so that the AWS credentials (stored in environment variables) are not available to any other jobs.
+    # However, if this Action is used in a job that has other steps, clear the AWS credentials from the environment at the end of the job to avoid leaking them to any subsequent steps.
+    # See https://github.com/aws-actions/configure-aws-credentials/issues/1308.
+    - name: Clear AWS credentials
+      if: always()
+      shell: bash
+      run: |
+        echo "AWS_ACCESS_KEY_ID=''" >>"$GITHUB_ENV"
+        echo "AWS_SECRET_ACCESS_KEY=''" >>"$GITHUB_ENV"
+        echo "AWS_SESSION_TOKEN=''" >>"$GITHUB_ENV"
+        echo "AWS_DEFAULT_REGION=''" >>"$GITHUB_ENV"
+        echo "AWS_REGION=''" >>"$GITHUB_ENV"
+
+    - name: Determine identifier prefix
+      id: determine-identifier-prefix
+      shell: bash
+      env:
+        IMAGE_IDENTIFIER: ${{ inputs.imageIdentifier }}
+      run: |
+        if [[ "$IMAGE_IDENTIFIER" == "sha256:"* ]]; then
+          echo "identifierPrefix=@" >> $GITHUB_OUTPUT
+        else
+          echo "identifierPrefix=:" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Determine image URI
+      id: determine-image-uri
+      shell: bash
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        GITHUB_REPOSITORY: ${{ inputs.githubRepository }}
+        APP_NAME: ${{ inputs.appName }}
+        IMAGE_IDENTIFIER_PREFIX: ${{ steps.determine-identifier-prefix.outputs.identifierPrefix }}
+        IMAGE_IDENTIFIER: ${{ inputs.imageIdentifier }}
+      run: |
+        # Default appName to the GitHub repository name (without the owner) if not provided
+        if [[ -z $APP_NAME ]]; then
+          APP_NAME="${GITHUB_REPOSITORY#*/}"
+        fi
+
+        IMAGE_REPOSITORY=$GITHUB_REPOSITORY
+        if [[ -n $APP_NAME ]]; then
+          IMAGE_REPOSITORY=$IMAGE_REPOSITORY/$APP_NAME
+        fi
+
+        IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY$IMAGE_IDENTIFIER_PREFIX$IMAGE_IDENTIFIER"
+        echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT
+
+    - name: Pull image
+      shell: bash
+      env:
+        IMAGE_URI: ${{ steps.determine-image-uri.outputs.imageUri }}
+      run: docker pull "$IMAGE_URI"
