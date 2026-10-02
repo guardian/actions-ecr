@@ -1,0 +1,10 @@
+name: "Guardian Actions ECR"
+description: "Do not use this action directly. Read [the documentation](https://github.com/guardian/actions-ecr/blob/main/README.md) instead."
+runs:
+  using: "composite"
+  steps:
+    - name: error
+      shell: bash
+      run: |
+        echo "Do not use this action directly. Read https://github.com/guardian/actions-ecr/blob/main/README.md instead."
+        exit 1
