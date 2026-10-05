@@ -86,13 +86,12 @@ runs:
       shell: bash
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        GITHUB_REPOSITORY: ${{ inputs.githubRepository }}
+        GH_REPOSITORY: ${{ inputs.githubRepository }}
         APP: ${{ inputs.app }}
         IMAGE_IDENTIFIER_PREFIX: ${{ steps.determine-identifier-prefix.outputs.identifierPrefix }}
         IMAGE_IDENTIFIER: ${{ inputs.imageIdentifier }}
       run: |
-        IMAGE_REPOSITORY=$GITHUB_REPOSITORY/$APP
-
+        IMAGE_REPOSITORY=$GH_REPOSITORY/$APP
         IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY$IMAGE_IDENTIFIER_PREFIX$IMAGE_IDENTIFIER"
         echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT
 
