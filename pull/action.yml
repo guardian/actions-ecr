@@ -8,7 +8,7 @@ inputs:
     description: "The GitHub repository that produced the image to be pulled of format 'owner/name'. Defaults to the current GitHub repository."
     required: false
     default: ${{ github.repository }}
-  appName:
+  app:
     description: "The app name, appended to the ECR image repository. Typically, the `name` portion of the `githubRepository` input."
     required: true
   imageIdentifier:
@@ -24,12 +24,12 @@ runs:
     - name: Validate inputs
       shell: bash
       env:
-        APP_NAME: ${{ inputs.appName }}
+        APP: ${{ inputs.app }}
         ROLE_ARN: ${{ inputs.roleArn }}
         IMAGE_IDENTIFIER: ${{ inputs.imageIdentifier }}
       run: |
-        if [[ -z "$APP_NAME" ]]; then
-          echo "appName is required and must not be empty."
+        if [[ -z "$APP" ]]; then
+          echo "app is required and must not be empty."
           exit 1
         fi
         
@@ -87,11 +87,11 @@ runs:
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         GITHUB_REPOSITORY: ${{ inputs.githubRepository }}
-        APP_NAME: ${{ inputs.appName }}
+        APP: ${{ inputs.app }}
         IMAGE_IDENTIFIER_PREFIX: ${{ steps.determine-identifier-prefix.outputs.identifierPrefix }}
         IMAGE_IDENTIFIER: ${{ inputs.imageIdentifier }}
       run: |
-        IMAGE_REPOSITORY=$GITHUB_REPOSITORY/$APP_NAME
+        IMAGE_REPOSITORY=$GITHUB_REPOSITORY/$APP
 
         IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY$IMAGE_IDENTIFIER_PREFIX$IMAGE_IDENTIFIER"
         echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT

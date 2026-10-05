@@ -33,7 +33,7 @@ jobs:
       - uses: guardian/actions-ecr/pull@vX.Y.Z
         id: pull-image
         with:
-          appName: my-app
+          app: my-app
           imageIdentifier: branch-main
           roleArn: ${{ secrets.GU_ARTIFACTS_ROLE_ARN }}
       - name: Run image from main
@@ -62,7 +62,7 @@ jobs:
       - uses: guardian/actions-ecr/pull@vX.Y.Z
         id: pull-dcr-image
         with:
-          appName: dotcom-rendering
+          app: dotcom-rendering
           githubRepository: guardian/dotcom-rendering
           imageIdentifier: branch-main
           roleArn: ${{ secrets.GU_ARTIFACTS_ROLE_ARN }}
