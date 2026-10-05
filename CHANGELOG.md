@@ -1,5 +1,11 @@
 # actions-ecr
 
+## 1.0.1
+
+### Patch Changes
+
+- 3e8ab3f: Correctly observe `githubRepository` input.
+
 ## 1.0.0
 
 ### Major Changes
