@@ -142,7 +142,15 @@ runs:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         BUILD_NUMBER: ${{ github.run_number }}
       run: |
-        IMAGE_DIGEST=$(docker manifest inspect $REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER --verbose | jq -r '.Descriptor.digest')
+        IMAGE_REFERENCE="$REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER"
+        IMAGE_DIGEST=$(docker buildx imagetools inspect "$IMAGE_REFERENCE" --format '{{.Manifest.Digest}}')
+
+        if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+          echo "Expected a sha256 digest for $IMAGE_REFERENCE, but received '${IMAGE_DIGEST:-<empty>}'." >&2
+          echo "Verify the pushed manifest with: docker buildx imagetools inspect \"$IMAGE_REFERENCE\"." >&2
+          exit 1
+        fi
+
         echo "imageDigest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
         
         IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY@$IMAGE_DIGEST"
