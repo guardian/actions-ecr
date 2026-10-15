@@ -5,6 +5,8 @@ A ([composite](https://docs.github.com/en/actions/tutorials/create-actions/creat
 - `build-<BUILD_NUMBER>` (e.g. `build-123`)
 - `lifecycle-<BRANCH_NAME>-<BUILD_NUMBER>` (e.g. `lifecycle-main-123`). This tag is used in lifecycle rules defined in https://github.com/guardian/riffraff-platform to automatically delete old images.
 
+For single-architecture images, the `imageDigest` output is the image manifest digest. For multi-architecture images, it is the top-level image index digest, which resolves to the appropriate platform-specific image when pulled.
+
 See [`action.yml`](action.yml) for details on the available inputs and outputs.
 
 ## Permissions

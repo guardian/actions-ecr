@@ -142,7 +142,21 @@ runs:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         BUILD_NUMBER: ${{ github.run_number }}
       run: |
-        IMAGE_DIGEST=$(docker manifest inspect $REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER --verbose | jq -r '.Descriptor.digest')
+        IMAGE_REFERENCE="$REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER"
+        MANIFEST_DETAILS=$(docker manifest inspect "$IMAGE_REFERENCE" --verbose)
+
+        # this is based ouput from `docker manifest inspect --verbose alpine:3.20`
+        if [[ $(jq -r 'type' <<< "$MANIFEST_DETAILS") == "array" ]]; then
+          IMAGE_DIGEST=$(docker buildx imagetools inspect "$IMAGE_REFERENCE" --format '{{json .Manifest}}' | jq -er '.digest')
+        else
+          IMAGE_DIGEST=$(jq -er '.Descriptor.digest' <<< "$MANIFEST_DETAILS")
+        fi
+
+        if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+          echo "Failed to obtain a valid digest for $IMAGE_REFERENCE." >&2
+          exit 1
+        fi
+
         echo "imageDigest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
         
         IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY@$IMAGE_DIGEST"
