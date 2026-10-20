@@ -1,5 +1,11 @@
 # actions-ecr
 
+## 1.0.2
+
+### Patch Changes
+
+- 9384e5b: Return the top-level image index digest after pushing a multi-architecture image.
+
 ## 1.0.1
 
 ### Patch Changes
