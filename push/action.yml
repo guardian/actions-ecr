@@ -157,6 +157,7 @@ runs:
         echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT
 
     - uses: actions/github-script@v9
+      continue-on-error: true
       env:
         IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
         IMAGE_DIGEST: ${{ steps.obtain-image-details.outputs.imageDigest }}

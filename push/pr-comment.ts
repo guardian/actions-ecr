@@ -1,5 +1,6 @@
 import type * as core from '@actions/core'
 import type * as github from '@actions/github'
+import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods'
 
 type Payload = {
  core: typeof core
@@ -34,33 +35,56 @@ function getConfig(): Config {
  }
 }
 
+async function listPullRequestsAssociatedWithCommit(payload: Payload, commitSha: string): Promise<RestEndpointMethodTypes["repos"]["listPullRequestsAssociatedWithCommit"]["response"]> {
+ const { context, github, core } = payload;
+ const maxAttempts = 3;
+ let attempt = 1;
+
+ while (true) {
+  try {
+   return await github.rest.repos.listPullRequestsAssociatedWithCommit({
+    ...context.repo,
+    commit_sha: commitSha,
+   });
+  } catch (error: unknown) {
+   const status =
+    typeof error === 'object' && error !== null && 'status' in error && typeof error.status === 'number' ? error.status : undefined;
+
+   if (status === undefined || ![500, 502, 503, 504].includes(status) || attempt === maxAttempts) {
+    throw error;
+   }
+
+   const delayMs = 500 * 2 ** (attempt - 1);
+   core.warning(`GitHub API returned ${status}; retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxAttempts}).`);
+   await new Promise((resolve) => setTimeout(resolve, delayMs));
+   attempt++;
+  }
+ }
+}
+
 async function getPrNumber(payload: Payload, config: Config): Promise<number | undefined> {
- const { context, github } = payload;
+ const { context } = payload;
 
  const { pull_request } = context.payload;
 
  if (pull_request) {
-  return Promise.resolve(pull_request.number);
+  return pull_request.number;
  }
 
  const { commitSha } = config;
 
  console.log(`Attempting to get PR number from commit ${commitSha}`);
 
- const result = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-  ...context.repo,
-  commit_sha: commitSha,
- });
+ const result = await listPullRequestsAssociatedWithCommit(payload, commitSha);
 
  const openPrs = result.data.filter(({ state }) => state === 'open');
  const pr = openPrs.find((_) => context.ref === `refs/heads/${_.head.ref}`) ?? openPrs.at(0);
 
  if (!pr) {
-  console.error('Failed to identify PR number from commit.');
-  return Promise.resolve(undefined);
+  return undefined;
  } else {
   console.log(`Identified PR number as ${pr.number} from commit.`);
-  return Promise.resolve(pr.number);
+  return pr.number;
  }
 }
 
@@ -155,9 +179,25 @@ async function commentOnPr(payload: Payload, config: Config, pullRequestNumber: 
 
 export const main = async (payload: Payload) => {
  const config = getConfig();
- const prNumber = await getPrNumber(payload, config);
+ let prNumber: number | undefined;
 
- if (prNumber) {
+ try {
+  prNumber = await getPrNumber(payload, config);
+ } catch (error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  payload.core.setFailed(`Failed to look up a pull request for commit with SHA: ${config.commitSha}: ${message}`);
+  return;
+ }
+
+ if (prNumber === undefined) {
+  payload.core.info(`No open pull request found for commit ${config.commitSha}; skipping the PR comment.`);
+  return;
+ }
+
+ try {
   await commentOnPr(payload, config, prNumber);
+ } catch (error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  payload.core.setFailed(`Failed to add the image details to pull request #${prNumber}: ${message}`);
  }
 }
