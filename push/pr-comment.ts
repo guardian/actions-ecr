@@ -1,6 +1,5 @@
 import type * as core from '@actions/core'
 import type * as github from '@actions/github'
-import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods'
 
 type Payload = {
  core: typeof core
@@ -35,35 +34,8 @@ function getConfig(): Config {
  }
 }
 
-async function listPullRequestsAssociatedWithCommit(payload: Payload, commitSha: string): Promise<RestEndpointMethodTypes["repos"]["listPullRequestsAssociatedWithCommit"]["response"]> {
- const { context, github, core } = payload;
- const maxAttempts = 3;
- let attempt = 1;
-
- while (true) {
-  try {
-   return await github.rest.repos.listPullRequestsAssociatedWithCommit({
-    ...context.repo,
-    commit_sha: commitSha,
-   });
-  } catch (error: unknown) {
-   const status =
-    typeof error === 'object' && error !== null && 'status' in error && typeof error.status === 'number' ? error.status : undefined;
-
-   if (status === undefined || ![500, 502, 503, 504].includes(status) || attempt === maxAttempts) {
-    throw error;
-   }
-
-   const delayMs = 500 * 2 ** (attempt - 1);
-   core.warning(`GitHub API returned ${status}; retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxAttempts}).`);
-   await new Promise((resolve) => setTimeout(resolve, delayMs));
-   attempt++;
-  }
- }
-}
-
 async function getPrNumber(payload: Payload, config: Config): Promise<number | undefined> {
- const { context } = payload;
+ const { context, github } = payload;
 
  const { pull_request } = context.payload;
 
@@ -75,7 +47,10 @@ async function getPrNumber(payload: Payload, config: Config): Promise<number | u
 
  console.log(`Attempting to get PR number from commit ${commitSha}`);
 
- const result = await listPullRequestsAssociatedWithCommit(payload, commitSha);
+ const result = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+  ...context.repo,
+  commit_sha: commitSha,
+ });
 
  const openPrs = result.data.filter(({ state }) => state === 'open');
  const pr = openPrs.find((_) => context.ref === `refs/heads/${_.head.ref}`) ?? openPrs.at(0);

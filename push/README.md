@@ -9,6 +9,8 @@ For single-architecture images, the `imageDigest` output is the image manifest d
 
 See [`action.yml`](action.yml) for details on the available inputs and outputs.
 
+The PR-comment step uses Octokit's retry plugin, provided by `actions/github-script`, with up to two retries per eligible GitHub API request (three attempts total). Retry eligibility and delays follow the plugin's defaults. If no open PR is found, commenting is skipped. Comment-step failures are logged but do not fail the image-push action.
+
 ## Permissions
 This Action requires the following permissions:
 - `id-token: write` - to obtain an OIDC token for authenticating with AWS ECR

@@ -166,6 +166,7 @@ runs:
         COMMIT_SHA: ${{ github.sha }}
       with:
         github-token: ${{ inputs.githubToken }}
+        retries: 2
         script: |
           const path = require('node:path');
           const codePath = path.join(process.env.GITHUB_ACTION_PATH, 'pr-comment.ts');
