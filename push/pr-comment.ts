@@ -40,7 +40,7 @@ async function getPrNumber(payload: Payload, config: Config): Promise<number | u
  const { pull_request } = context.payload;
 
  if (pull_request) {
-  return Promise.resolve(pull_request.number);
+  return pull_request.number;
  }
 
  const { commitSha } = config;
@@ -56,11 +56,10 @@ async function getPrNumber(payload: Payload, config: Config): Promise<number | u
  const pr = openPrs.find((_) => context.ref === `refs/heads/${_.head.ref}`) ?? openPrs.at(0);
 
  if (!pr) {
-  console.error('Failed to identify PR number from commit.');
-  return Promise.resolve(undefined);
+  return undefined;
  } else {
   console.log(`Identified PR number as ${pr.number} from commit.`);
-  return Promise.resolve(pr.number);
+  return pr.number;
  }
 }
 
@@ -155,9 +154,25 @@ async function commentOnPr(payload: Payload, config: Config, pullRequestNumber: 
 
 export const main = async (payload: Payload) => {
  const config = getConfig();
- const prNumber = await getPrNumber(payload, config);
+ let prNumber: number | undefined;
 
- if (prNumber) {
+ try {
+  prNumber = await getPrNumber(payload, config);
+ } catch (error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  payload.core.setFailed(`Failed to look up a pull request for commit with SHA: ${config.commitSha}: ${message}`);
+  return;
+ }
+
+ if (prNumber === undefined) {
+  payload.core.info(`No open pull request found for commit ${config.commitSha}; skipping the PR comment.`);
+  return;
+ }
+
+ try {
   await commentOnPr(payload, config, prNumber);
+ } catch (error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  payload.core.setFailed(`Failed to add the image details to pull request #${prNumber}: ${message}`);
  }
 }
