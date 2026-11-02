@@ -156,6 +156,20 @@ runs:
         IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY@$IMAGE_DIGEST"
         echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT
 
+    - name: Docker Scout
+      if: ${{ github.event_name == 'pull_request' }}
+      uses: docker/scout-action@v1.29.0
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
+      with:
+        command: compare
+        image: ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}
+        to: ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:branch-${{ github.base_ref }}
+        ignore-unchanged: true
+        write-comment: true
+        github-token: ${{ inputs.githubToken }}
+
     - uses: actions/github-script@v9
       continue-on-error: true
       env:
