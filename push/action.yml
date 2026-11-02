@@ -165,6 +165,7 @@ runs:
         SAFE_BRANCH_NAME: ${{ steps.determine-repository.outputs.safeBranchName }}
         BUILD_NUMBER: ${{ github.run_number }}
         COMMIT_SHA: ${{ github.sha }}
+        APP: ${{ steps.determine-repository.outputs.app }}
       with:
         github-token: ${{ inputs.githubToken }}
         retries: 2
