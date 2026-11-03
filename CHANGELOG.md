@@ -1,5 +1,11 @@
 # actions-ecr
 
+## 1.1.0
+
+### Minor Changes
+
+- b790e0e: Add app of pushed image to PR comment header.
+
 ## 1.0.3
 
 ### Patch Changes
