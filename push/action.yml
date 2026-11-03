@@ -156,7 +156,8 @@ runs:
         IMAGE_URI="$REGISTRY/$IMAGE_REPOSITORY@$IMAGE_DIGEST"
         echo "imageUri=${IMAGE_URI}" >> $GITHUB_OUTPUT
 
-    - uses: actions/github-script@v9
+    - name: Comment on PR
+      uses: actions/github-script@v9
       continue-on-error: true
       env:
         IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
@@ -164,6 +165,7 @@ runs:
         SAFE_BRANCH_NAME: ${{ steps.determine-repository.outputs.safeBranchName }}
         BUILD_NUMBER: ${{ github.run_number }}
         COMMIT_SHA: ${{ github.sha }}
+        APP: ${{ steps.determine-repository.outputs.app }}
       with:
         github-token: ${{ inputs.githubToken }}
         retries: 2

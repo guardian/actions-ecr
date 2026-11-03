@@ -12,7 +12,8 @@ type Config = {
  imageDigest: string,
  branchName: string,
  buildNumber: string,
- commitSha: string
+ commitSha: string,
+ app: string
 }
 
 function getConfig(): Config {
@@ -21,7 +22,8 @@ function getConfig(): Config {
   IMAGE_DIGEST,
   SAFE_BRANCH_NAME,
   BUILD_NUMBER,
-  COMMIT_SHA
+  COMMIT_SHA,
+  APP
  } = process.env;
 
  // Whilst we're type-casting without checking the contents, these properties are modelled as required fields in action.yml (or have a default), so it should be safe.
@@ -30,7 +32,8 @@ function getConfig(): Config {
   imageDigest: IMAGE_DIGEST as string,
   branchName: SAFE_BRANCH_NAME as string,
   buildNumber: BUILD_NUMBER as string,
-  commitSha: COMMIT_SHA as string
+  commitSha: COMMIT_SHA as string,
+  app: APP as string
  }
 }
 
@@ -71,12 +74,13 @@ async function commentOnPr(payload: Payload, config: Config, pullRequestNumber: 
   imageDigest,
   branchName,
   buildNumber,
+  app,
  } = config;
 
  const marker = `<!-- guardian/actions-ecr for ${imageRepository} -->`;
 
  const commentBody = [
-  '### :rocket: Image pushed to AWS ECR',
+  `### :rocket: Image for ${app} pushed to AWS ECR`,
   `Image digest: \`${imageDigest}\``,
   '',
   '<details>',
