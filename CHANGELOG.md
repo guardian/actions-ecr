@@ -1,5 +1,11 @@
 # actions-ecr
 
+## 1.1.1
+
+### Patch Changes
+
+- 9aa12c0: Add a `dryRun` option to guardian/actions-ecr/push, allowing you to test the action before commiting to publishing images to ECR.
+
 ## 1.1.0
 
 ### Minor Changes
