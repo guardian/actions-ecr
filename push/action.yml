@@ -10,6 +10,10 @@ inputs:
   githubToken:
     description: "A GitHub token scoped to allow pull request commenting"
     required: true
+  dryRyn:
+    description: "When 'true', the image is not pushed to ECR, but PR comments and other steps still run."
+    required: false
+    default: "false"
 outputs:
   imageDigest:
     description: "The immutable digest of the pushed image."
@@ -128,6 +132,7 @@ runs:
         docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:lifecycle-$BRANCH_NAME-$BUILD_NUMBER
 
     - name: Push image to AWS ECR
+      if: ${{ inputs.dryRyn != 'true' }}
       shell: bash
       env:
         IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
@@ -141,9 +146,15 @@ runs:
         IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         BUILD_NUMBER: ${{ github.run_number }}
+        DRY_RUN: ${{ inputs.dryRun }}
       run: |
         IMAGE_REFERENCE="$REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER"
-        IMAGE_DIGEST=$(docker buildx imagetools inspect "$IMAGE_REFERENCE" --format '{{.Manifest.Digest}}')
+        if [[ "$DRY_RUN" == "true" ]]; then
+          echo "Dry run: image was not pushed; using the local image ID in place of the registry digest."
+          IMAGE_DIGEST=$(docker image inspect "$IMAGE_REFERENCE" --format '{{.Id}}')
+        else
+          IMAGE_DIGEST=$(docker buildx imagetools inspect "$IMAGE_REFERENCE" --format '{{.Manifest.Digest}}')
+        fi
 
         if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
           echo "Expected a sha256 digest for $IMAGE_REFERENCE, but received '${IMAGE_DIGEST:-<empty>}'." >&2

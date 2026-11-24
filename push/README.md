@@ -57,3 +57,7 @@ jobs:
 ```
 
 By default, images are published to `<organisation>/<repository>/<repository>`, in the case of repositories with multiple apps the `app` property can be used to push to `<organisation>/<repository>/<app>`.
+
+### Dry runs
+
+For development purposes set `dryRun: true` to skip pushing the image to ECR. The image is still tagged, and PR comments are still posted (the digest output is the local image ID rather than a registry digest).
