@@ -10,7 +10,6 @@ type Payload = {
 type Config = {
  imageRepository: string,
  imageDigest: string,
- branchName: string,
  buildNumber: string,
  commitSha: string,
  app: string
@@ -20,7 +19,6 @@ function getConfig(): Config {
  const {
   IMAGE_REPOSITORY,
   IMAGE_DIGEST,
-  SAFE_BRANCH_NAME,
   BUILD_NUMBER,
   COMMIT_SHA,
   APP
@@ -30,7 +28,6 @@ function getConfig(): Config {
  return {
   imageRepository: IMAGE_REPOSITORY as string,
   imageDigest: IMAGE_DIGEST as string,
-  branchName: SAFE_BRANCH_NAME as string,
   buildNumber: BUILD_NUMBER as string,
   commitSha: COMMIT_SHA as string,
   app: APP as string
@@ -72,7 +69,6 @@ async function commentOnPr(payload: Payload, config: Config, pullRequestNumber: 
  const {
   imageRepository,
   imageDigest,
-  branchName,
   buildNumber,
   app,
  } = config;
@@ -92,8 +88,8 @@ async function commentOnPr(payload: Payload, config: Config, pullRequestNumber: 
   '# Refer to image using the immutable digest. Find alternatives below.',
   `IMAGE_IDENTIFIER="@${imageDigest}"`,
   '',
-  '# Refer to image using branch tag',
-  `# IMAGE_IDENTIFIER=":branch-${branchName}"`,
+  '# Refer to image using latest tag with PR number',
+  `# IMAGE_IDENTIFIER=":latest-PR-${pullRequestNumber}"`,
   '',
   '# Refer to image using build tag',
   `# IMAGE_IDENTIFIER=":build-${buildNumber}"`,

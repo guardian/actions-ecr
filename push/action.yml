@@ -10,7 +10,7 @@ inputs:
   githubToken:
     description: "A GitHub token scoped to allow pull request commenting"
     required: true
-  dryRyn:
+  dryRun:
     description: "When 'true', the image is not pushed to ECR, but PR comments and other steps still run."
     required: false
     default: "false"
@@ -40,24 +40,16 @@ runs:
           exit 1
         fi
 
-    - name: Determine ECR repository and branch name
+    - name: Determine ECR repository
       id: determine-repository
       shell: bash
       env:
         GH_REPOSITORY: ${{ github.repository }}
-        RAW_BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref || 'unknown' }}
         APP: ${{ inputs.app }}
       run: |
-        # Remove "refs/heads/" prefix
-        TRIMMED_BRANCH_NAME="${RAW_BRANCH_NAME#refs/heads/}"
-
-        # Replace '/' with '-' for ECR compatibility
-        SAFE_BRANCH_NAME=${TRIMMED_BRANCH_NAME//\//-}
-
         IMAGE_REPOSITORY=$GH_REPOSITORY/$APP
 
         echo "app=${APP}" >> $GITHUB_OUTPUT
-        echo "safeBranchName=${SAFE_BRANCH_NAME}" >> $GITHUB_OUTPUT
         echo "imageRepository=${IMAGE_REPOSITORY}" >> $GITHUB_OUTPUT
 
     - name: Find local source image
@@ -124,15 +116,13 @@ runs:
         SOURCE_IMAGE: ${{ steps.find-source-image.outputs.sourceImage }}
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
-        BRANCH_NAME: ${{ steps.determine-repository.outputs.safeBranchName }}
         BUILD_NUMBER: ${{ github.run_number }}
+        IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('latest-PR-{0}', github.event.pull_request.number) || 'latest' }}
       run: |
-        docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:branch-$BRANCH_NAME
+        docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:$IMAGE_TAG
         docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:build-$BUILD_NUMBER
-        docker image tag $SOURCE_IMAGE $REGISTRY/$IMAGE_REPOSITORY:lifecycle-$BRANCH_NAME-$BUILD_NUMBER
-
     - name: Push image to AWS ECR
-      if: ${{ inputs.dryRyn != 'true' }}
+      if: ${{ inputs.dryRun != 'true' }}
       shell: bash
       env:
         IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
@@ -173,7 +163,6 @@ runs:
       env:
         IMAGE_REPOSITORY: ${{ steps.determine-repository.outputs.imageRepository }}
         IMAGE_DIGEST: ${{ steps.obtain-image-details.outputs.imageDigest }}
-        SAFE_BRANCH_NAME: ${{ steps.determine-repository.outputs.safeBranchName }}
         BUILD_NUMBER: ${{ github.run_number }}
         COMMIT_SHA: ${{ github.sha }}
         APP: ${{ steps.determine-repository.outputs.app }}

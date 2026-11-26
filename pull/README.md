@@ -34,7 +34,7 @@ jobs:
         id: pull-image
         with:
           app: my-app
-          imageIdentifier: branch-main
+          imageIdentifier: latest
           roleArn: ${{ secrets.GU_ARTIFACTS_ROLE_ARN }}
       - name: Run image from main
         env:
@@ -64,7 +64,7 @@ jobs:
         with:
           app: dotcom-rendering
           githubRepository: guardian/dotcom-rendering
-          imageIdentifier: branch-main
+          imageIdentifier: latest
           roleArn: ${{ secrets.GU_ARTIFACTS_ROLE_ARN }}
       - name: Run DCR
         env:
