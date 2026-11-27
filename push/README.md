@@ -1,9 +1,8 @@
 # `guardian/actions-ecr/push`
 
 A ([composite](https://docs.github.com/en/actions/tutorials/create-actions/create-a-composite-action)) GitHub Action to tag and push a Docker image to Amazon ECR with the following tags:
-- `branch-<BRANCH_NAME>` (e.g. `branch-main`)
 - `build-<BUILD_NUMBER>` (e.g. `build-123`)
-- `lifecycle-<BRANCH_NAME>-<BUILD_NUMBER>` (e.g. `lifecycle-main-123`). This tag is used in lifecycle rules defined in https://github.com/guardian/riffraff-platform to automatically delete old images.
+- `latest-PR-<PR_NUMBER>` (e.g. `latest-PR-123`) for a pull request or `latest` otherwise.
 
 For single-architecture images, the `imageDigest` output is the image manifest digest. For multi-architecture images, it is the top-level image index digest, which resolves to the appropriate platform-specific image when pulled.
 

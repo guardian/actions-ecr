@@ -12,7 +12,7 @@ inputs:
     description: "The app name, appended to the ECR image repository. Typically, the `name` portion of the `githubRepository` input."
     required: true
   imageIdentifier:
-    description: "An identifier of the image in ECR. Either the image digest of format (e.g. 'sha256:1234') or a tag (e.g. 'branch-main')."
+    description: "An identifier of the image in ECR. Either the image digest of format (e.g. 'sha256:1234') or a tag (e.g. 'latest')."
     required: true
 outputs:
   imageUri:
